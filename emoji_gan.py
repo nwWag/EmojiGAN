@@ -2,18 +2,23 @@ from torch import nn, optim
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import torch
+from torch.utils.data import Dataset, DataLoader
 import torchvision
-device = 'cpu'
+import numpy as np
+import cv2
+import os
+from PIL import Image
+device = 'cuda'
 
 
 class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
 
-        self.conv = nn.Sequential(Res_Block_Down_2D(3, 16, 3, 1, nn.SELU(), False),
-                                  Res_Block_Down_2D(
-                                      16, 16, 3, 1, nn.SELU(), False),
-                                  Res_Block_Down_2D(16, 16, 3, 1, nn.SELU(), False))
+        self.conv = nn.Sequential(Res_Block_Down_2D(4, 16, 3, 1, nn.SELU(), False),
+                                  #Res_Block_Down_2D(
+                                   #   16, 16, 3, 1, nn.SELU(), False),
+                                      Res_Block_Down_2D(16, 16, 3, 1, nn.SELU(), False))
 
         self.predict = nn.Sequential(nn.Linear(16, 1), nn.Sigmoid())
 
@@ -28,10 +33,16 @@ class Discriminator(nn.Module):
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
-        self.conv = nn.Sequential(Res_Block_Down_2D(1, 16, 3, 1, nn.SELU(), False),
+        self.conv = nn.Sequential(Res_Block_Up_2D(3, 16, 3, 1, nn.SELU()),
+                                  Res_Block_Up_2D(
+                                      16, 16, 3, 1, nn.SELU()),
+                                  Res_Block_Up_2D(
+                                      16, 16, 3, 1, nn.SELU()),
                                   Res_Block_Down_2D(
                                       16, 16, 3, 1, nn.SELU(), False),
-                                  Res_Block_Down_2D(16, 3, 3, 1, nn.Sigmoid(), False))
+                                  Res_Block_Down_2D(
+                                      16, 16, 3, 1, nn.SELU(), False),
+                                  Res_Block_Down_2D(16, 4, 3, 1, nn.Sigmoid(), False))
 
     def forward(self, x):
         x = self.conv(x)  # * 255
@@ -52,17 +63,13 @@ class Training():
         self.steps_disc = 1
         self.steps_gen = 1
 
-        self.epochs = 1
+        self.epochs = 10000
         self.image_shape = (64, 64)
-        self.batch_size = 16
+        self.batch_size = 128
         self.dataloader = self.load_dataset()
 
     def load_dataset(self):
-        data_path = 'node_modules/emoji-datasource-apple/img/apple/'
-        train_dataset = torchvision.datasets.ImageFolder(
-            root=data_path,
-            transform=torchvision.transforms.ToTensor()
-        )
+        train_dataset = EmojiDataset()
         train_loader = torch.utils.data.DataLoader(
             train_dataset,
             batch_size=self.batch_size,
@@ -76,20 +83,24 @@ class Training():
         zeros = torch.zeros(self.batch_size, requires_grad=False).to(device)
         for epoch in range(self.epochs):
             for i, (real_images, _) in enumerate(self.dataloader):
-                noise = torch.randn(
-                    self.batch_size, 1, self.image_shape[0], self.image_shape[1], requires_grad=False).to(device)
-                fake_images = self.generator(noise).to(device)
-                real_images = real_images.to(device)
-                plt.imshow(fake_images[0].reshape(
-                    self.image_shape[0], self.image_shape[1], 3).detach().cpu().numpy())
-                plt.savefig('out.png')
-                # Generator , needs update for steps
-                self.optim_gen.zero_grad()
-                loss_gen = self.loss(self.discriminator(fake_images),
-                                     ones)
+                if real_images.shape[0] < self.batch_size:
+                    continue
+                for _ in range(2):   
+                    noise = torch.randn(
+                        self.batch_size, 3, 8, 8, requires_grad=False).to(device)
+                    fake_images = self.generator(noise).to(device)
+                    real_images = real_images.to(device)
 
-                loss_gen.backward()
-                self.optim_gen.step()
+                    write_data = np.moveaxis(fake_images[0].detach().cpu().numpy(), 0, -1) * 255          
+                    im = Image.fromarray(np.uint8(write_data), mode='RGBA')
+                    im.save('out.png')
+                    # Generator , needs update for steps
+                    self.optim_gen.zero_grad()
+                    loss_gen = self.loss(self.discriminator(fake_images),
+                                        ones)
+
+                    loss_gen.backward()
+                    self.optim_gen.step()
 
                 # Discrimenator , needs update for steps
                 self.optim_disc.zero_grad()
@@ -107,6 +118,32 @@ class Training():
                 print("Epoch", epoch, "Iteration", i, "Generator loss",
                       loss_gen.item(), "Discriminator loss", loss_disc.item())
 
+class EmojiDataset(Dataset):
+    """Face Landmarks dataset."""
+
+    def __init__(self):
+        path = 'node_modules/emoji-datasource-apple/img/apple/64/'
+        arr_file_names = []
+        files = os.listdir(path)
+        files.sort()
+        for file in files:
+            if file.endswith('.png'):
+                arr_file_names.append(os.path.join(path, file))
+        images = []
+        for file in files:
+            im = np.array(cv2.imread(path + file, cv2.IMREAD_UNCHANGED))
+            im_rgba = im / 255.0
+            im_rgba = np.moveaxis(im_rgba, -1, 0)
+            images.append(im_rgba)
+
+        self.data = np.array(images)
+        print(self.data.shape)
+
+    def __len__(self):
+        return self.data.shape[0]
+
+    def __getitem__(self, idx):
+        return torch.from_numpy(self.data[idx]).float(), torch.zeros(1)
 
 class Res_Block_Down_2D(nn.Module):
     def __init__(self, size_in_channels, size_out_channels, size_filter, size_stride, fn_act, pool_avg):
@@ -154,6 +191,38 @@ class Res_Block_Down_2D(nn.Module):
 
         return out
 
+
+class Res_Block_Up_2D(nn.Module):
+    def __init__(self, size_in_channels, size_out_channels, size_filter, size_stride, fn_act):
+        super(Res_Block_Up_2D, self).__init__()
+
+        # Nodes ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+        self.layer_conv1 = nn.Conv2d(size_in_channels,size_in_channels, size_filter, size_stride,  padding=(int(size_filter/2),int(size_filter/2)))
+        self.layer_norm1 = nn.BatchNorm2d(size_in_channels)
+
+        self.fn_act = fn_act
+        self.fn_identity = nn.Identity()
+
+        self.layer_conv2= nn.Conv2d(size_in_channels,size_in_channels, size_filter, size_stride, padding=(int(size_filter/2),int(size_filter/2)))
+        self.layer_norm2 = nn.BatchNorm2d(size_in_channels)
+
+        self.layer_up = nn.ConvTranspose2d(size_in_channels, size_out_channels, size_filter + 1, (2,2), padding=(1,1))
+
+
+    def forward(self, x):
+        identity = self.fn_identity(x)
+
+        out = self.layer_conv1(x)
+        out = self.layer_norm1(out)
+        out = self.fn_act(out)
+        out = self.layer_conv2(out)
+        out = self.layer_norm2(out)
+
+        out += identity
+        out = self.layer_up(out)
+        out = self.fn_act(out)
+        return out
 
 ##############################################################################
 
