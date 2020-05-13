@@ -16,10 +16,10 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
 
-        self.conv = nn.Sequential(Res_Block_Down_2D(4, 64, 3, 1, nn.SELU(), False),
+        self.conv = nn.Sequential(Res_Block_Down_2D(4, 64, 3, 1, nn.Sigmoid(), False),
                                   Res_Block_Down_2D(
-                                      64, 64, 3, 1, nn.SELU(), False),
-                                      Res_Block_Down_2D(64, 16, 3, 1, nn.SELU(), False))
+                                      64, 64, 3, 1, nn.Sigmoid(), False),
+                                      Res_Block_Down_2D(64, 16, 3, 1, nn.Sigmoid(), False))
 
         self.predict = nn.Sequential(nn.Linear(16, 1), nn.Sigmoid())
 
@@ -34,15 +34,15 @@ class Discriminator(nn.Module):
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
-        self.conv = nn.Sequential(Res_Block_Up_2D(4, 64, 3, 1, nn.SELU()),
+        self.conv = nn.Sequential(Res_Block_Up_2D(4, 64, 3, 1, nn.Sigmoid()),
                                   Res_Block_Up_2D(
-                                      64, 64, 3, 1, nn.SELU()),
+                                      64, 64, 3, 1, nn.Sigmoid()),
                                   Res_Block_Up_2D(
-                                      64, 64, 3, 1, nn.SELU()),
-                                  Res_Block_Down_2D(
-                                      64, 64, 3, 1, nn.SELU(), False),
-                                  Res_Block_Down_2D(
-                                      64, 16, 3, 1, nn.SELU(), False),
+                                      64, 64, 3, 1, nn.Sigmoid()),
+                                  Res_Block_Up_2D(
+                                      64, 64, 3, 1, nn.Sigmoid()),
+                                  Res_Block_Up_2D(
+                                      64, 16, 3, 1, nn.Sigmoid()),
                                   Res_Block_Down_2D(16, 4, 3, 1, nn.Sigmoid(), False))
 
     def forward(self, x):
@@ -51,7 +51,7 @@ class Generator(nn.Module):
 
 
 class Training():
-    def __init__(self, lr=1e-4):
+    def __init__(self, lr=1e-5):
         self.discriminator = Discriminator().to(device)
         self.generator = Generator().to(device)
 
@@ -88,7 +88,7 @@ class Training():
                     continue
                 for _ in range(2):   
                     noise = torch.randn(
-                        self.batch_size, 4, 8, 8, requires_grad=False).to(device)
+                        self.batch_size, 4, 2, 2, requires_grad=False).to(device)
                     fake_images = self.generator(noise).to(device)
                     real_images = real_images.to(device)
 
@@ -130,7 +130,7 @@ class EmojiDataset(Dataset):
         with open('node_modules/emoji-datasource-apple/emoji_pretty.json') as json_file:
             data = json.load(json_file)
             for entry in data:
-                if entry['category'] == 'Smileys & Emotion' or entry['category'] == 'People & Body':
+                if entry['category'] == 'Smileys & Emotion':# or entry['category'] == 'People & Body':
                     files.append(entry['image'])
         images = []
         for file in files:
