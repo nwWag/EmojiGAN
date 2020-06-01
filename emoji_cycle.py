@@ -126,10 +126,10 @@ names = ["grinning",
         "hear_no_evil",
         "speak_no_evil"]
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, nc=4):
         super(Discriminator, self).__init__()
 
-        self.conv = nn.Sequential(Res_Block_Down_2D(4, 64, 3, 1, nn.LeakyReLU(0.2, inplace=True), False),
+        self.conv = nn.Sequential(Res_Block_Down_2D(nc, 64, 3, 1, nn.LeakyReLU(0.2, inplace=True), False),
                                   Res_Block_Down_2D(
                                       64, 64, 3, 1, nn.LeakyReLU(0.2, inplace=True), True),
                                       Res_Block_Down_2D(64, 1, 3, 1, nn.LeakyReLU(0.2, inplace=True), True))
@@ -144,7 +144,7 @@ class Discriminator(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self):
+    def __init__(self, nc=4, add_channel=1):
         super(Generator, self).__init__()
         """
         self.conv = nn.Sequential(Res_Block_Up_2D(4, 64, 3, 1, nn.LeakyReLU(0.2, inplace=True)),
@@ -158,11 +158,11 @@ class Generator(nn.Module):
                                       64, 64, 3, 1, nn.LeakyReLU(0.2, inplace=True), False),
                                   Res_Block_Down_2D(64, 4, 3, 1, nn.Sigmoid(), False))
         """
-        nc = 4
+        nc = nc
         ngf = 64
         self.conv = nn.Sequential(
 
-            nn.ConvTranspose2d( nc, ngf * 8, 4, 2, 1, bias=False),
+            nn.Conv2d( nc, ngf * 8, 3, 1, 1, bias=False),
             nn.BatchNorm2d(ngf * 8),
             nn.ReLU(True),
 
@@ -170,7 +170,7 @@ class Generator(nn.Module):
             nn.BatchNorm2d(ngf * 4),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d( ngf * 4, ngf * 2, 4, 2, 1, bias=False),
+            nn.Conv2d( ngf * 4, ngf * 2, 3, 1, 1, bias=False),
             nn.BatchNorm2d(ngf * 2),
             nn.ReLU(True),
 
@@ -178,7 +178,7 @@ class Generator(nn.Module):
             nn.BatchNorm2d(ngf),
             nn.ReLU(True),
 
-            nn.ConvTranspose2d( ngf, nc, 4, 2, 1, bias=False),
+            nn.Conv2d( ngf, nc + add_channel, 3, 1, 1, bias=False),
             nn.Sigmoid()
  
         )
@@ -191,8 +191,13 @@ class Generator(nn.Module):
 
 class Training():
     def __init__(self, lr=1e-4 * 2):
-        self.discriminator = Discriminator().to(device)
-        self.generator = Generator().to(device)
+        self.discriminator1 = Discriminator(nc=4).to(device)
+        self.generator1 = Generator(nc=3).to(device)
+
+        self.discriminator2 = Discriminator(nc=3).to(device)
+        self.generator2 = Generator(nc=4, add_channel=-1).to(device)
+
+
         def weights_init(m):
             classname = m.__class__.__name__
             if classname.find('Conv') != -1:
@@ -200,69 +205,120 @@ class Training():
             elif classname.find('BatchNorm') != -1:
                 nn.init.normal_(m.weight.data, 1.0, 0.02)
                 nn.init.constant_(m.bias.data, 0)
-        self.discriminator.apply(weights_init)
-        self.generator.apply(weights_init)
+        self.discriminator1.apply(weights_init)
+        self.generator1.apply(weights_init)
+        self.discriminator2.apply(weights_init)
+        self.generator2.apply(weights_init)
 
-        self.optim_disc = optim.Adam(self.discriminator.parameters(), lr=lr)
-        self.optim_gen = optim.Adam(self.generator.parameters(), lr=lr)
-        def loss_d_wg(real, fake):
-            return  -(torch.mean(real) - torch.mean(fake))
-        def loss_g_wg(fake):
-            return  -torch.mean(fake)
+        self.optim_disc = optim.Adam(list(self.discriminator1.parameters()) + list(self.discriminator2.parameters()), lr=lr)
+        self.optim_gen = optim.Adam(list(self.generator1.parameters()) + list(self.generator2.parameters()), lr=lr)
+
+        def loss_d_wg(real1,real2, fake1, fake2):
+            return  -((torch.mean(real1)+torch.mean(real2)) - (torch.mean(fake1)+torch.mean(fake2)))
+        def loss_g_wg(fake1, fake2):
+            return  -torch.mean(fake1) - torch.mean(fake2)
 
         # Loss function
         self.loss_D = loss_d_wg
         self.loss_G = loss_g_wg
+        self.loss_R = nn.MSELoss(reduction='mean')
         self.steps_disc = 1
         self.steps_gen = 1
 
         self.epochs = 10000
         self.image_shape = (64, 64)
-        self.batch_size = 64
+        self.batch_size = 8
         self.dataloader = self.load_dataset()
 
     def load_dataset(self):
         train_dataset = EmojiDataset()
+        target_dataset = ImageDataset()
         train_loader = torch.utils.data.DataLoader(
             train_dataset,
             batch_size=self.batch_size,
             num_workers=0,
             shuffle=True
         )
-        return train_loader
+        target_loader = torch.utils.data.DataLoader(
+            target_dataset,
+            batch_size=self.batch_size,
+            num_workers=0,
+            shuffle=True
+        )
+        return train_loader, target_loader
 
     def start(self):
         ones = torch.ones(self.batch_size, requires_grad=False).to(device)
         zeros = torch.zeros(self.batch_size, requires_grad=False).to(device)
+
         for epoch in range(self.epochs):
-            for i, (real_images, _) in enumerate(self.dataloader):
-                if real_images.shape[0] < self.batch_size:
+
+            iter_emojis = iter(self.dataloader[0]) 
+            iter_images = iter(self.dataloader[1])
+            num_batches = len(self.dataloader[0])
+            for i in range(num_batches):
+                emojis = iter_emojis.next()[0].to(device)
+                images = iter_images.next()[0].to(device)
+
+                print(emojis.shape, images.shape)
+
+                if emojis.shape[0] < self.batch_size:
                     continue
-                for _ in range(1):   
-                    noise = torch.randn(
-                        self.batch_size, 4, 8, 8, requires_grad=False).to(device)
-                    fake_images = self.generator(noise).to(device)
-                    real_images = real_images.to(device)
 
-                    write_data_unordered = (np.moveaxis(fake_images[0].detach().cpu().numpy(), 0, -1) * 255)
-                    write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
-                    np.expand_dims(write_data_unordered[:,:,0], axis=2), np.expand_dims(write_data_unordered[:,:,3], axis=2)), axis=2)     
-                    im = Image.fromarray(np.uint8(write_data), mode='RGBA')
-                    im.save('out_images/out' + str((epoch * 7+i) % 50) + '.png')
-                    # Generator , needs update for steps
-                    self.optim_gen.zero_grad()
-                    loss_gen = self.loss_G(self.discriminator(fake_images))
+                fake_emojis = self.generator1(images)
+                fake_images = self.generator2(emojis)
 
-                    loss_gen.backward()
-                    self.optim_gen.step()
                 for _ in range(1):   
                 # Discrimenator , needs update for steps
                     self.optim_disc.zero_grad()
-                    loss_disc = self.loss_D(self.discriminator(real_images), self.discriminator(fake_images.detach()))
-
+                    loss_disc = self.loss_D(self.discriminator1(emojis), self.discriminator2(images), self.discriminator1(fake_emojis), self.discriminator2(fake_images))
 
                     loss_disc.backward()
                     self.optim_disc.step()
+
+
+                # HIGHLY INEFFICIENT. retain graph would be better
+                fake_emojis = self.generator1(images)
+                fake_images = self.generator2(emojis)
+                reconst_emojis = self.generator1(fake_images)
+                reconst_images = self.generator2(fake_emojis)
+
+                for _ in range(1):   
+                    # Generator , needs update for steps
+                    self.optim_gen.zero_grad()
+                    loss_gen = self.loss_G(self.discriminator1(fake_emojis), self.discriminator2(fake_images)) + \
+                            self.loss_R(images, reconst_images) + self.loss_R(emojis, reconst_emojis)
+                    
+
+                    loss_gen.backward()
+                    self.optim_gen.step()
+
+
+                # WRITE DATA
+                if i % 6 == 0:
+                    write_data_unordered = (np.moveaxis(emojis[0].detach().cpu().numpy(), 0, -1) * 255)
+                    write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
+                    np.expand_dims(write_data_unordered[:,:,0], axis=2), np.expand_dims(write_data_unordered[:,:,3], axis=2)), axis=2)     
+                    im = Image.fromarray(np.uint8(write_data), mode='RGBA')
+                    im.save('out_images/' + 'org_emoji.png')
+
+                    write_data_unordered = (np.moveaxis(fake_emojis[0].detach().cpu().numpy(), 0, -1) * 255)
+                    write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
+                    np.expand_dims(write_data_unordered[:,:,0], axis=2), np.expand_dims(write_data_unordered[:,:,3], axis=2)), axis=2)     
+                    im = Image.fromarray(np.uint8(write_data), mode='RGBA')
+                    im.save('out_images/' + 'fake_emoji.png')
+
+                    write_data_unordered = (np.moveaxis(images[0].detach().cpu().numpy(), 0, -1) * 255)
+                    write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
+                    np.expand_dims(write_data_unordered[:,:,0], axis=2)), axis=2)     
+                    im = Image.fromarray(np.uint8(write_data), mode='RGB')
+                    im.save('out_images/' + 'org_image.png')
+
+                    write_data_unordered = (np.moveaxis(fake_images[0].detach().cpu().numpy(), 0, -1) * 255)
+                    write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
+                    np.expand_dims(write_data_unordered[:,:,0], axis=2)), axis=2)     
+                    im = Image.fromarray(np.uint8(write_data), mode='RGB')
+                    im.save('out_images/' + 'fake_image.png')
 
                 print("Epoch", epoch, "Iteration", i, "Generator loss",
                       loss_gen.item(), "Discriminator loss", loss_disc.item())
@@ -302,6 +358,35 @@ class EmojiDataset(Dataset):
 
     def __getitem__(self, idx):
         return torch.from_numpy(self.data[idx]).float(), torch.zeros(1)
+
+class ImageDataset(Dataset):
+    def __init__(self, down=2):
+        paths = ['01000']
+        arr_file_names = []
+
+        images = []
+        for path in paths:
+            files = os.listdir(os.getcwd() +'/'+ path)
+            for file in files:
+                im = np.array(cv2.imread(path +'/' + file, cv2.IMREAD_UNCHANGED))
+                try:
+                    im_rgb = im / 255.0
+                    im_rgb = np.moveaxis(im_rgb, -1, 0)
+                    im_rgb = im_rgb[::,::int(down),::int(down)]
+                    images.append(im_rgb)
+                except:
+                    continue
+
+        self.data = np.array(images)
+        print(self.data.shape)
+
+    def __len__(self):
+        return self.data.shape[0]
+
+    def __getitem__(self, idx):
+        return torch.from_numpy(self.data[idx]).float(), torch.zeros(1)
+
+
 
 class Res_Block_Down_2D(nn.Module):
     def __init__(self, size_in_channels, size_out_channels, size_filter, size_stride, fn_act, pool_avg):
