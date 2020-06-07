@@ -125,14 +125,479 @@ names = ["grinning",
         "see_no_evil",
         "hear_no_evil",
         "speak_no_evil"]
+
+"""
+        ,#+++++++++++++++++++++++++++++++++++++++++++++++
+        "wave",
+        "raised_back_of_hand",
+        "raised_hand_with_fingers_splayed",
+        "hand",
+        "spock-hand",
+        "ok_hand",
+        "pinching_hand",
+        "v",
+        "crossed_fingers",
+        "i_love_you_hand_sign",
+        "the_horns",
+        "call_me_hand",
+        "point_left",
+        "point_right",
+        "point_up_2",
+        "middle_finger",
+        "point_down",
+        "point_up",
+        "+1",
+        "-1",
+        "fist",
+        "facepunch",
+        "left-facing_fist",
+        "right-facing_fist",
+        "clap",
+        "raised_hands",
+        "open_hands",
+        "palms_up_together",
+        "handshake",
+        "pray",
+        "writing_hand",
+        "nail_care",
+        "selfie",
+        "muscle",
+        "mechanical_arm",
+        "mechanical_leg",
+        "leg",
+        "foot",
+        "ear",
+        "ear_with_hearing_aid",
+        "nose",
+        "brain",
+        "tooth",
+        "bone",
+        "eyes",
+        "eye",
+        "tongue",
+        "lips",
+        "baby",
+        "child",
+        "boy",
+        "girl",
+        "adult",
+        "person_with_blond_hair",
+        "man",
+        "bearded_person",
+        "red_haired_man",
+        "curly_haired_man",
+        "white_haired_man",
+        "bald_man",
+        "woman",
+        "red_haired_woman",
+        "red_haired_person",
+        "curly_haired_woman",
+        "curly_haired_person",
+        "white_haired_woman",
+        "white_haired_person",
+        "bald_woman",
+        "bald_person",
+        "blond-haired-woman",
+        "blond-haired-man",
+        "older_adult",
+        "older_man",
+        "older_woman",
+        "person_frowning",
+        "man-frowning",
+        "woman-frowning",
+        "person_with_pouting_face",
+        "man-pouting",
+        "woman-pouting",
+        "no_good",
+        "man-gesturing-no",
+        "woman-gesturing-no",
+        "ok_woman",
+        "man-gesturing-ok",
+        "woman-gesturing-ok",
+        "information_desk_person",
+        "man-tipping-hand",
+        "woman-tipping-hand",
+        "raising_hand",
+        "man-raising-hand",
+        "woman-raising-hand",
+        "deaf_person",
+        "deaf_man",
+        "deaf_woman",
+        "bow",
+        "man-bowing",
+        "woman-bowing",
+        "face_palm",
+        "man-facepalming",
+        "woman-facepalming",
+        "shrug",
+        "man-shrugging",
+        "woman-shrugging",
+        "health_worker",
+        "male-doctor",
+        "female-doctor",
+        "student",
+        "male-student",
+        "female-student",
+        "teacher",
+        "male-teacher",
+        "female-teacher",
+        "judge",
+        "male-judge",
+        "female-judge",
+        "farmer",
+        "male-farmer",
+        "female-farmer",
+        "cook",
+        "male-cook",
+        "female-cook",
+        "mechanic",
+        "male-mechanic",
+        "female-mechanic",
+        "factory_worker",
+        "male-factory-worker",
+        "female-factory-worker",
+        "office_worker",
+        "male-office-worker",
+        "female-office-worker",
+        "scientist",
+        "male-scientist",
+        "female-scientist",
+        "technologist",
+        "male-technologist",
+        "female-technologist",
+        "singer",
+        "male-singer",
+        "female-singer",
+        "artist",
+        "male-artist",
+        "female-artist",
+        "pilot",
+        "male-pilot",
+        "female-pilot",
+        "astronaut",
+        "male-astronaut",
+        "female-astronaut",
+        "firefighter",
+        "male-firefighter",
+        "female-firefighter",
+        "cop",
+        "male-police-officer",
+        "female-police-officer",
+        "sleuth_or_spy",
+        "male-detective",
+        "female-detective",
+        "guardsman",
+        "male-guard",
+        "female-guard",
+        "construction_worker",
+        "male-construction-worker",
+        "female-construction-worker",
+        "prince",
+        "princess",
+        "man_with_turban",
+        "man-wearing-turban",
+        "woman-wearing-turban",
+        "man_with_gua_pi_mao",
+        "person_with_headscarf",
+        "man_in_tuxedo",
+        "bride_with_veil",
+        "pregnant_woman",
+        "breast-feeding",
+        "angel",
+        "santa",
+        "mrs_claus",
+        "superhero",
+        "male_superhero",
+        "female_superhero",
+        "supervillain",
+        "male_supervillain",
+        "female_supervillain",
+        "mage",
+        "male_mage",
+        "female_mage",
+        "fairy",
+        "male_fairy",
+        "female_fairy",
+        "vampire",
+        "male_vampire",
+        "female_vampire",
+        "merperson",
+        "merman",
+        "mermaid",
+        "elf",
+        "male_elf",
+        "female_elf",
+        "genie",
+        "male_genie",
+        "female_genie",
+        "zombie",
+        "male_zombie",
+        "female_zombie",
+        "massage",
+        "man-getting-massage",
+        "woman-getting-massage",
+        "haircut",
+        "man-getting-haircut",
+        "woman-getting-haircut",
+        "walking",
+        "man-walking",
+        "woman-walking",
+        "standing_person",
+        "man_standing",
+        "woman_standing",
+        "kneeling_person",
+        "man_kneeling",
+        "woman_kneeling",
+        "person_with_probing_cane",
+        "man_with_probing_cane",
+        "woman_with_probing_cane",
+        "person_in_motorized_wheelchair",
+        "man_in_motorized_wheelchair",
+        "woman_in_motorized_wheelchair",
+        "person_in_manual_wheelchair",
+        "man_in_manual_wheelchair",
+        "woman_in_manual_wheelchair",
+        "runner",
+        "man-running",
+        "woman-running",
+        "dancer",
+        "man_dancing",
+        "man_in_business_suit_levitating",
+        "dancers",
+        "man-with-bunny-ears-partying",
+        "woman-with-bunny-ears-partying",
+        "person_in_steamy_room",
+        "man_in_steamy_room",
+        "woman_in_steamy_room",
+        "person_climbing",
+        "man_climbing",
+        "woman_climbing",
+        "fencer",
+        "horse_racing",
+        "skier",
+        "snowboarder",
+        "golfer",
+        "man-golfing",
+        "woman-golfing",
+        "surfer",
+        "man-surfing",
+        "woman-surfing",
+        "rowboat",
+        "man-rowing-boat",
+        "woman-rowing-boat",
+        "swimmer",
+        "man-swimming",
+        "woman-swimming",
+        "person_with_ball",
+        "man-bouncing-ball",
+        "woman-bouncing-ball",
+        "weight_lifter",
+        "man-lifting-weights",
+        "woman-lifting-weights",
+        "bicyclist",
+        "man-biking",
+        "woman-biking",
+        "mountain_bicyclist",
+        "man-mountain-biking",
+        "woman-mountain-biking",
+        "person_doing_cartwheel",
+        "man-cartwheeling",
+        "woman-cartwheeling",
+        "wrestlers",
+        "man-wrestling",
+        "woman-wrestling",
+        "water_polo",
+        "man-playing-water-polo",
+        "woman-playing-water-polo",
+        "handball",
+        "man-playing-handball",
+        "woman-playing-handball",
+        "juggling",
+        "man-juggling",
+        "woman-juggling",
+        "person_in_lotus_position",
+        "man_in_lotus_position",
+        "woman_in_lotus_position",
+        "bath",
+        "sleeping_accommodation",
+        "people_holding_hands",
+        "two_women_holding_hands",
+        "couple",
+        "two_men_holding_hands",
+        "couplekiss",
+        "woman-kiss-man",
+        "man-kiss-man",
+        "woman-kiss-woman",
+        "couple_with_heart",
+        "woman-heart-man",
+        "man-heart-man",
+        "woman-heart-woman",
+        "family",
+        "man-woman-boy",
+        "man-woman-girl",
+        "man-woman-girl-boy",
+        "man-woman-boy-boy",
+        "man-woman-girl-girl",
+        "man-man-boy",
+        "man-man-girl",
+        "man-man-girl-boy",
+        "man-man-boy-boy",
+        "man-man-girl-girl",
+        "woman-woman-boy",
+        "woman-woman-girl",
+        "woman-woman-girl-boy",
+        "woman-woman-boy-boy",
+        "woman-woman-girl-girl",
+        "man-boy",
+        "man-boy-boy",
+        "man-girl",
+        "man-girl-boy",
+        "man-girl-girl",
+        "woman-boy",
+        "woman-boy-boy",
+        "woman-girl",
+        "woman-girl-boy",
+        "woman-girl-girl",
+        "speaking_head_in_silhouette",
+        "bust_in_silhouette",
+        "busts_in_silhouette",
+        "footprints", 
+         "monkey_face",
+        "monkey",
+        "gorilla",
+        "orangutan",
+        "dog",
+        "dog2",
+        "guide_dog",
+        "service_dog",
+        "poodle",
+        "wolf",
+        "fox_face",
+        "raccoon",
+        "cat",
+        "cat2",
+        "lion_face",
+        "tiger",
+        "tiger2",
+        "leopard",
+        "horse",
+        "racehorse",
+        "unicorn_face",
+        "zebra_face",
+        "deer",
+        "cow",
+        "ox",
+        "water_buffalo",
+        "cow2",
+        "pig",
+        "pig2",
+        "boar",
+        "pig_nose",
+        "ram",
+        "sheep",
+        "goat",
+        "dromedary_camel",
+        "camel",
+        "llama",
+        "giraffe_face",
+        "elephant",
+        "rhinoceros",
+        "hippopotamus",
+        "mouse",
+        "mouse2",
+        "rat",
+        "hamster",
+        "rabbit",
+        "rabbit2",
+        "chipmunk",
+        "hedgehog",
+        "bat",
+        "bear",
+        "koala",
+        "panda_face",
+        "sloth",
+        "otter",
+        "skunk",
+        "kangaroo",
+        "badger",
+        "feet",
+        "turkey",
+        "chicken",
+        "rooster",
+        "hatching_chick",
+        "baby_chick",
+        "hatched_chick",
+        "bird",
+        "penguin",
+        "dove_of_peace",
+        "eagle",
+        "duck",
+        "swan",
+        "owl",
+        "flamingo",
+        "peacock",
+        "parrot",
+        "frog",
+        "crocodile",
+        "turtle",
+        "lizard",
+        "snake",
+        "dragon_face",
+        "dragon",
+        "sauropod",
+        "t-rex",
+        "whale",
+        "whale2",
+        "dolphin",
+        "fish",
+        "tropical_fish",
+        "blowfish",
+        "shark",
+        "octopus",
+        "shell",
+        "snail",
+        "butterfly",
+        "bug",
+        "ant",
+        "bee",
+        "beetle",
+        "cricket",
+        "spider",
+        "spider_web",
+        "scorpion",
+        "mosquito",
+        "microbe",
+        "bouquet",
+        "cherry_blossom",
+        "white_flower",
+        "rosette",
+        "rose",
+        "wilted_flower",
+        "hibiscus",
+        "sunflower",
+        "blossom",
+        "tulip",
+        "seedling",
+        "evergreen_tree",
+        "deciduous_tree",
+        "palm_tree",
+        "cactus",
+        "ear_of_rice",
+        "herb",
+        "shamrock",
+        "four_leaf_clover",
+        "maple_leaf",
+        "fallen_leaf",
+        "leaves"]
+        """
 class Discriminator(nn.Module):
-    def __init__(self, nc=4):
+    def __init__(self, nc=4, blocks_down = 2):
         super(Discriminator, self).__init__()
 
-        self.conv = nn.Sequential(Res_Block_Down_2D(nc, 64, 3, 1, nn.LeakyReLU(0.2, inplace=True), False),
-                                  Res_Block_Down_2D(
-                                      64, 64, 3, 1, nn.LeakyReLU(0.2, inplace=True), True),
-                                      Res_Block_Down_2D(64, 1, 3, 1, nn.LeakyReLU(0.2, inplace=True), True))
+        self.conv = nn.Sequential(Res_Block_Down_2D(nc,32, 3, 1, nn.LeakyReLU(0.2, inplace=True), False),
+                                        *[Res_Block_Down_2D(
+                                      32, 32, 3, 1, nn.LeakyReLU(0.2, inplace=True), True) for i in range(blocks_down)],
+                                      Res_Block_Down_2D(32, 1, 3, 1, nn.LeakyReLU(0.2, inplace=True), False))
 
         self.predict = nn.Sequential(nn.Linear(256, 1))
 
@@ -144,7 +609,7 @@ class Discriminator(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, nc=4, add_channel=1):
+    def __init__(self, nc=4, add_channel=1, convs_up=0, convs_down=0):
         super(Generator, self).__init__()
         """
         self.conv = nn.Sequential(Res_Block_Up_2D(4, 64, 3, 1, nn.LeakyReLU(0.2, inplace=True)),
@@ -162,19 +627,15 @@ class Generator(nn.Module):
         ngf = 64
         self.conv = nn.Sequential(
 
-            nn.Conv2d( nc, ngf * 8, 3, 1, 1, bias=False),
-            nn.BatchNorm2d(ngf * 8),
+            
+            nn.Conv2d( nc, ngf, 3, 1, 1, bias=False),
+            nn.BatchNorm2d(ngf),
             nn.ReLU(True),
 
-            nn.Conv2d(ngf * 8, ngf * 4, 3, 1, 1, bias=False),
-            nn.BatchNorm2d(ngf * 4),
-            nn.ReLU(True),
+            *[nn.ConvTranspose2d(ngf, ngf, 3 + 1, (2,2), padding=(1,1)) for i in range(convs_up)],
+            *[nn.AvgPool2d((2, 2), stride=2) for i in range(convs_down)],
 
-            nn.Conv2d( ngf * 4, ngf * 2, 3, 1, 1, bias=False),
-            nn.BatchNorm2d(ngf * 2),
-            nn.ReLU(True),
-
-            nn.Conv2d( ngf * 2, ngf, 3, 1, 1, bias=False),
+            nn.Conv2d(ngf, ngf, 3, 1, 1, bias=False),
             nn.BatchNorm2d(ngf),
             nn.ReLU(True),
 
@@ -191,10 +652,10 @@ class Generator(nn.Module):
 
 class Training():
     def __init__(self, lr=1e-4 * 2):
-        self.discriminator1 = Discriminator(nc=4).to(device)
+        self.discriminator1 = Discriminator(nc=4, blocks_down=4).to(device)
         self.generator1 = Generator(nc=3).to(device)
 
-        self.discriminator2 = Discriminator(nc=3).to(device)
+        self.discriminator2 = Discriminator(nc=3, blocks_down=4).to(device)
         self.generator2 = Generator(nc=4, add_channel=-1).to(device)
 
 
@@ -227,7 +688,7 @@ class Training():
 
         self.epochs = 10000
         self.image_shape = (64, 64)
-        self.batch_size = 8
+        self.batch_size = 4
         self.dataloader = self.load_dataset()
 
     def load_dataset(self):
@@ -247,7 +708,14 @@ class Training():
         )
         return train_loader, target_loader
 
-    def start(self):
+    def start(self, load=False):
+        if load:
+            self.discriminator1.load_state_dict(torch.load("model/" + "disc1.pt"))
+            self.discriminator2.load_state_dict(torch.load("model/" + "disc2.pt"))
+            self.generator1.load_state_dict(torch.load("model/" + "gen1.pt"))
+            self.generator2.load_state_dict(torch.load("model/" + "gen2.pt"))
+            self.optim_disc.load_state_dict(torch.load("optimizer/" + "disc.pt"))
+            self.optim_gen.load_state_dict(torch.load("optimizer/"+ "gen.pt"))
         ones = torch.ones(self.batch_size, requires_grad=False).to(device)
         zeros = torch.zeros(self.batch_size, requires_grad=False).to(device)
 
@@ -259,9 +727,7 @@ class Training():
             for i in range(num_batches):
                 emojis = iter_emojis.next()[0].to(device)
                 images = iter_images.next()[0].to(device)
-
-                print(emojis.shape, images.shape)
-
+                
                 if emojis.shape[0] < self.batch_size:
                     continue
 
@@ -322,11 +788,18 @@ class Training():
 
                 print("Epoch", epoch, "Iteration", i, "Generator loss",
                       loss_gen.item(), "Discriminator loss", loss_disc.item())
+                torch.save(self.discriminator1.state_dict(), "model/"+ "disc1.pt")
+                torch.save(self.discriminator2.state_dict(), "model/"+ "disc2.pt")
+                torch.save(self.generator1.state_dict(), "model/"+ "gen1.pt")
+                torch.save(self.generator2.state_dict(), "model/"+ "gen2.pt")
+                torch.save(self.optim_disc.state_dict(), "optimizer/"+ "disc.pt")
+                torch.save(self.optim_gen.state_dict(), "optimizer/"+ "gen.pt")
 
+        
 class EmojiDataset(Dataset):
     """Face Landmarks dataset."""
 
-    def __init__(self):
+    def __init__(self, up=4):
         paths = ['node_modules/emoji-datasource-apple/img/apple/64/', 'node_modules/emoji-datasource-twitter/img/twitter/64/',
         'node_modules/emoji-datasource-facebook/img/facebook/64/', 'node_modules/emoji-datasource-google/img/google/64/']
         arr_file_names = []
@@ -351,6 +824,11 @@ class EmojiDataset(Dataset):
                     continue
 
         self.data = np.array(images)
+        self.data_up = np.empty((self.data.shape[0], self.data.shape[1], self.data.shape[2] * up, self.data.shape[3] * up))
+
+        for i in range(self.data.shape[0]):
+            self.data_up[i] = self.data[i].repeat(up, 1).repeat(up, 2)
+        self.data = self.data_up
         print(self.data.shape)
 
     def __len__(self):
@@ -360,26 +838,25 @@ class EmojiDataset(Dataset):
         return torch.from_numpy(self.data[idx]).float(), torch.zeros(1)
 
 class ImageDataset(Dataset):
-    def __init__(self, down=2):
-        paths = ['01000']
+    def __init__(self, down=4):
+        paths = ['01000_hq']
         arr_file_names = []
 
-        images = []
+        images = np.empty((1000, 3, int(1024/down), int(1024/down)))
         for path in paths:
             files = os.listdir(os.getcwd() +'/'+ path)
-            for file in files:
+            for i, file in enumerate(files):
                 im = np.array(cv2.imread(path +'/' + file, cv2.IMREAD_UNCHANGED))
                 try:
                     im_rgb = im / 255.0
                     im_rgb = np.moveaxis(im_rgb, -1, 0)
                     im_rgb = im_rgb[::,::int(down),::int(down)]
-                    images.append(im_rgb)
+                    images[i] = im_rgb
                 except:
                     continue
 
         self.data = np.array(images)
         print(self.data.shape)
-
     def __len__(self):
         return self.data.shape[0]
 
@@ -470,4 +947,4 @@ class Res_Block_Up_2D(nn.Module):
 ##############################################################################
 
 if __name__ == "__main__":
-    Training().start()
+    Training().start(load=True)
