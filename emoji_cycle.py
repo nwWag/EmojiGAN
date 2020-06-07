@@ -607,7 +607,6 @@ class Discriminator(nn.Module):
         x = self.predict(x)
         return x
 
-
 class Generator(nn.Module):
     def __init__(self, nc=4, add_channel=1, convs_up=0, convs_down=0):
         super(Generator, self).__init__()
@@ -648,7 +647,6 @@ class Generator(nn.Module):
     def forward(self, x):
         x = self.conv(x)  # * 255
         return x
-
 
 class Training():
     def __init__(self, lr=1e-4 * 2):
@@ -794,7 +792,6 @@ class Training():
                 torch.save(self.generator2.state_dict(), "model/"+ "gen2.pt")
                 torch.save(self.optim_disc.state_dict(), "optimizer/"+ "disc.pt")
                 torch.save(self.optim_gen.state_dict(), "optimizer/"+ "gen.pt")
-
         
 class EmojiDataset(Dataset):
     """Face Landmarks dataset."""
@@ -863,8 +860,6 @@ class ImageDataset(Dataset):
     def __getitem__(self, idx):
         return torch.from_numpy(self.data[idx]).float(), torch.zeros(1)
 
-
-
 class Res_Block_Down_2D(nn.Module):
     def __init__(self, size_in_channels, size_out_channels, size_filter, size_stride, fn_act, pool_avg):
         super(Res_Block_Down_2D, self).__init__()
@@ -911,7 +906,6 @@ class Res_Block_Down_2D(nn.Module):
 
         return out
 
-
 class Res_Block_Up_2D(nn.Module):
     def __init__(self, size_in_channels, size_out_channels, size_filter, size_stride, fn_act):
         super(Res_Block_Up_2D, self).__init__()
@@ -944,7 +938,75 @@ class Res_Block_Up_2D(nn.Module):
         out = self.fn_act(out)
         return out
 
+class Inference():
+    def __init__(self, path=""):
+        self.discriminator1 = Discriminator(nc=4, blocks_down=4).to(device)
+        self.generator1 = Generator(nc=3).to(device)
+
+        self.discriminator2 = Discriminator(nc=3, blocks_down=4).to(device)
+        self.generator2 = Generator(nc=4, add_channel=-1).to(device)
+
+        # path must contain gen1.pt and gen2.pt
+        self.generator1.load_state_dict(torch.load(path + "gen1.pt"))
+        self.generator2.load_state_dict(torch.load(path + "gen2.pt"))
+    
+    def apply(self, emoji_path, image_path):
+        # Load emoji
+        try:
+            im = np.array(cv2.imread(emoji_path, cv2.IMREAD_UNCHANGED))
+            im_rgba = im / 255.0
+            emoji = np.moveaxis(im_rgba, -1, 0).repeat(4, 1).repeat(4, 2)
+        except:
+            print("Emoji not loaded.")
+            return
+
+        # Load image
+        im = np.array(cv2.imread(image_path, cv2.IMREAD_UNCHANGED))
+        try:
+            im_rgb = im / 255.0
+            image = np.moveaxis(im_rgb, -1, 0)
+        except:
+            print("Image not loaded.")
+            return
+
+
+        # To tensor
+        emoji = torch.unsqueeze(torch.from_numpy(emoji).to(device),dim=0).float()
+        image = torch.unsqueeze(torch.from_numpy(image).to(device),dim=0).float()
+
+        # Rescale image
+        image = nn.functional.interpolate(image, size=(256,256), mode='nearest')
+
+        fake_emoji = self.generator1(image)
+        fake_image = self.generator2(emoji)
+
+        write_data_unordered = (np.moveaxis(emoji[0].detach().cpu().numpy(), 0, -1) * 255)
+        write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
+        np.expand_dims(write_data_unordered[:,:,0], axis=2), np.expand_dims(write_data_unordered[:,:,3], axis=2)), axis=2)     
+        im = Image.fromarray(np.uint8(write_data), mode='RGBA')
+        im.save('out_images/' + 'org_emoji.png')
+
+        write_data_unordered = (np.moveaxis(fake_emoji[0].detach().cpu().numpy(), 0, -1) * 255)
+        write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
+        np.expand_dims(write_data_unordered[:,:,0], axis=2), np.expand_dims(write_data_unordered[:,:,3], axis=2)), axis=2)     
+        im = Image.fromarray(np.uint8(write_data), mode='RGBA')
+        im.save('out_images/' + 'fake_emoji.png')
+
+        write_data_unordered = (np.moveaxis(image[0].detach().cpu().numpy(), 0, -1) * 255)
+        write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
+        np.expand_dims(write_data_unordered[:,:,0], axis=2)), axis=2)     
+        im = Image.fromarray(np.uint8(write_data), mode='RGB')
+        im.save('out_images/' + 'org_image.png')
+
+        write_data_unordered = (np.moveaxis(fake_image[0].detach().cpu().numpy(), 0, -1) * 255)
+        write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
+        np.expand_dims(write_data_unordered[:,:,0], axis=2)), axis=2)     
+        im = Image.fromarray(np.uint8(write_data), mode='RGB')
+        im.save('out_images/' + 'fake_image.png')
+
+
 ##############################################################################
 
 if __name__ == "__main__":
-    Training().start(load=True)
+    #Training().start(load=True)
+    Inference("model/").apply("node_modules/emoji-datasource-apple/img/apple/64/1f924.png", "01000_hq/01000.png")
