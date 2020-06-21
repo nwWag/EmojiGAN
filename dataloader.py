@@ -39,3 +39,9 @@ class EmojiDataset(Dataset):
 
     def __getitem__(self, idx):
         return torch.from_numpy(self.data[idx]).float(), torch.zeros(1)
+
+if __name__ == '__main__':
+    emj = EmojiDataset()
+    img = emj.__getitem__(3)
+    import matplotlib.pyplot as plt
+    plt.imshow(img)

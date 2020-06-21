@@ -20,33 +20,25 @@ class Training():
         self.generator.apply(self.weights_init)
         self.discriminator.apply(self.weights_init)
 
-        lr = 0.0002
-        beta1= 0.5
-        
-        self.optim_G = optim.Adam(self.generator.parameters(),lr=lr, betas=(beta1, 0.999))
-        self.optim_D = optim.Adam(self.discriminator.parameters(),lr=lr, betas=(beta1, 0.999))
+        self.optim_G = optim.Adam(self.generator.parameters())
+        self.optim_D = optim.Adam(self.discriminator.parameters())
         
         self.loss = nn.BCELoss()
 
-        self.epochs = 1000
+        self.epochs = 100
         self.batch_size = 128
 
         self.img_shape = (64, 64)
 
-        num_workers = multiprocessing.cpu_count()
-        
-        print('num_workers', num_workers)
-        
         self.dataloader = torch.utils.data.DataLoader(
             EmojiDataset(),
             batch_size=self.batch_size,
-            num_workers=num_workers,
+            num_workers=0,
             shuffle=True
         )
         
-        self.device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
-        print('device',self.device)
 
+        self.device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 
     def weights_init(self, m):
         classname = m.__class__.__name__
