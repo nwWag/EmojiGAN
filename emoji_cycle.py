@@ -593,13 +593,32 @@ names = ["grinning",
 class Discriminator(nn.Module):
     def __init__(self, nc=4, blocks_down = 2):
         super(Discriminator, self).__init__()
-
+        """
         self.conv = nn.Sequential(Res_Block_Down_2D(nc,32, 3, 1, nn.LeakyReLU(0.2, inplace=True), False),
                                         *[Res_Block_Down_2D(
                                       32, 32, 3, 1, nn.LeakyReLU(0.2, inplace=True), True) for i in range(blocks_down)],
                                       Res_Block_Down_2D(32, 1, 3, 1, nn.LeakyReLU(0.2, inplace=True), False))
+        """
+        ngf = 64
+        self.conv = nn.Sequential(
 
-        self.predict = nn.Sequential(nn.Linear(256, 1))
+            
+            nn.Conv2d( nc, ngf, 3, 2, 1, bias=False),
+            nn.BatchNorm2d(ngf),
+            nn.PReLU(),
+
+            nn.AvgPool2d((3, 3), stride=3),
+            nn.Conv2d(ngf, ngf, 3, 1, 1, bias=False),
+            nn.BatchNorm2d(ngf),
+            nn.PReLU(),
+
+            nn.AvgPool2d((3, 3), stride=3),
+            nn.Conv2d(ngf, 1, 3, 1, 1, bias=False),
+            nn.BatchNorm2d(1),
+            nn.PReLU() 
+        )
+
+        self.predict = nn.Sequential(nn.Linear(196, 1), nn.Sigmoid())
 
     def forward(self, x):
         x = self.conv(x)
@@ -607,54 +626,98 @@ class Discriminator(nn.Module):
         x = self.predict(x)
         return x
 
-class Generator(nn.Module):
+class GeneratorDown(nn.Module):
     def __init__(self, nc=4, add_channel=1, convs_up=0, convs_down=0):
-        super(Generator, self).__init__()
-        """
-        self.conv = nn.Sequential(Res_Block_Up_2D(4, 64, 3, 1, nn.LeakyReLU(0.2, inplace=True)),
-                                  Res_Block_Up_2D(
-                                      64, 64, 3, 1, nn.LeakyReLU(0.2, inplace=True)),
-                                  Res_Block_Up_2D(
-                                      64, 64, 3, 1, nn.LeakyReLU(0.2, inplace=True)),
-                                  Res_Block_Down_2D(
-                                      64, 64, 3, 1, nn.LeakyReLU(0.2, inplace=True), False),
-                                  Res_Block_Down_2D(
-                                      64, 64, 3, 1, nn.LeakyReLU(0.2, inplace=True), False),
-                                  Res_Block_Down_2D(64, 4, 3, 1, nn.Sigmoid(), False))
-        """
+        super(GeneratorDown, self).__init__()
+        activation = nn.ReLU
         nc = nc
-        ngf = 64
-        self.conv = nn.Sequential(
-
-            
+        ngf = 128
+        self.conv1 = nn.Sequential(
             nn.Conv2d( nc, ngf, 3, 1, 1, bias=False),
             nn.BatchNorm2d(ngf),
-            nn.ReLU(True),
-
-            *[nn.ConvTranspose2d(ngf, ngf, 3 + 1, (2,2), padding=(1,1)) for i in range(convs_up)],
-            *[nn.AvgPool2d((2, 2), stride=2) for i in range(convs_down)],
-
+            activation(),
+            nn.AvgPool2d((3, 3), stride=2),
+        )
+        self.conv2 = nn.Sequential(
             nn.Conv2d(ngf, ngf, 3, 1, 1, bias=False),
             nn.BatchNorm2d(ngf),
-            nn.ReLU(True),
+            activation(),
+            nn.AvgPool2d((3, 3), stride=2),
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(ngf, ngf, 3, 1, 1, bias=False),
+            nn.BatchNorm2d(ngf),
+            activation(),
+            nn.AvgPool2d((3, 3), stride=2),
+        )
 
-            nn.Conv2d( ngf, nc + add_channel, 3, 1, 1, bias=False),
-            nn.Sigmoid()
- 
+    def forward(self, x):
+        if x.shape[1] == 3:
+            skip_x = torch.cat((x, torch.zeros(x.shape[0], 1, x.shape[2], x.shape[3]).to(device)), dim=1)
+        else:
+            skip_x = x[:,:3,:,:]
+
+        conv1 = self.conv1(x)
+        conv2 = self.conv2(conv1)
+        conv3 = self.conv3(conv2)
+
+        return conv1, conv2, conv3, skip_x
+
+class GeneratorUp(nn.Module):
+    def __init__(self, nc=4, add_channel=1, convs_up=0, convs_down=0):
+        super(GeneratorUp, self).__init__()
+        activation = nn.ReLU
+        nc = nc
+        ngf = 128
+        self.up_conv1 = nn.Sequential(
+            nn.Conv2d(ngf * 2, ngf, 5, 1, 2, bias=False),
+            nn.BatchNorm2d(ngf),
+            activation(),
+        )
+        self.up_conv2 = nn.Sequential(
+            nn.Conv2d(ngf * 2, ngf, 3, 1, 1, bias=False),
+            nn.BatchNorm2d(ngf),
+            activation(),
+        )
+        self.up_conv3 = nn.Sequential(
+            nn.Conv2d( ngf, nc + add_channel, 3, 1, 1, bias=True),
         )
 
 
-    def forward(self, x):
-        x = self.conv(x)  # * 255
-        return x
+    def forward(self, conv3, conv2_other, conv1_other, skip_x_other):
+        conv3 = F.interpolate(conv3, (conv2_other.shape[2], conv2_other.shape[3]), mode='nearest')
+        up_conv1 = self.up_conv1(torch.cat((conv3, conv2_other), dim=1))
+
+        up_conv1 = F.interpolate(up_conv1, (conv1_other.shape[2], conv1_other.shape[3]), mode='nearest')
+        up_conv2 = self.up_conv2(torch.cat((up_conv1, conv1_other), dim=1))
+
+        up_conv2 = F.interpolate(up_conv2, (skip_x_other.shape[2], skip_x_other.shape[3]), mode='nearest')
+        y = torch.sigmoid(self.up_conv3(up_conv2))# + skip_x_other)
+        return y
+
+class DoubleGenerator(nn.Module):
+    def __init__(self):
+        super(DoubleGenerator, self).__init__()
+        self.generator_up1 = GeneratorUp(nc=3)
+        self.generator_up2 = GeneratorUp(nc=4, add_channel=-1)
+
+        self.generator_down1 = GeneratorDown(nc=3)
+        self.generator_down2 = GeneratorDown(nc=4, add_channel=-1)
+
+    def forward(self, x1, x2):
+        conv1_x1, conv2_x1, conv3_x1, skip_x_x1 = self.generator_down1(x1)
+        conv1_x2, conv2_x2, conv3_x2, skip_x_x2 = self.generator_down2(x2)
+
+        y2 = self.generator_up2(conv3_x1, conv2_x2, conv1_x2, skip_x_x2)
+        y1 = self.generator_up1(conv3_x2, conv2_x1, conv1_x1, skip_x_x1)
+
+        return y1, y2
 
 class Training():
-    def __init__(self, lr=1e-4 * 2):
+    def __init__(self, lr=1e-4 * 1):
         self.discriminator1 = Discriminator(nc=4, blocks_down=4).to(device)
-        self.generator1 = Generator(nc=3).to(device)
-
         self.discriminator2 = Discriminator(nc=3, blocks_down=4).to(device)
-        self.generator2 = Generator(nc=4, add_channel=-1).to(device)
+        self.generator = DoubleGenerator().to(device)
 
 
         def weights_init(m):
@@ -664,16 +727,16 @@ class Training():
             elif classname.find('BatchNorm') != -1:
                 nn.init.normal_(m.weight.data, 1.0, 0.02)
                 nn.init.constant_(m.bias.data, 0)
-        self.discriminator1.apply(weights_init)
-        self.generator1.apply(weights_init)
-        self.discriminator2.apply(weights_init)
-        self.generator2.apply(weights_init)
+        #self.discriminator1.apply(weights_init)
+        #self.generator1.apply(weights_init)
+        #self.discriminator2.apply(weights_init)
+        #self.generator2.apply(weights_init)
 
         self.optim_disc = optim.Adam(list(self.discriminator1.parameters()) + list(self.discriminator2.parameters()), lr=lr)
-        self.optim_gen = optim.Adam(list(self.generator1.parameters()) + list(self.generator2.parameters()), lr=lr)
+        self.optim_gen = optim.Adam(list(self.generator.parameters()), lr=lr)
 
         def loss_d_wg(real1,real2, fake1, fake2):
-            return  -((torch.mean(real1)+torch.mean(real2)) - (torch.mean(fake1)+torch.mean(fake2)))
+            return  (-(torch.mean(real1)+torch.mean(real2)) + (torch.mean(fake1)+torch.mean(fake2)))
         def loss_g_wg(fake1, fake2):
             return  -torch.mean(fake1) - torch.mean(fake2)
 
@@ -686,7 +749,7 @@ class Training():
 
         self.epochs = 10000
         self.image_shape = (64, 64)
-        self.batch_size = 4
+        self.batch_size = 6
         self.dataloader = self.load_dataset()
 
     def load_dataset(self):
@@ -695,13 +758,11 @@ class Training():
         train_loader = torch.utils.data.DataLoader(
             train_dataset,
             batch_size=self.batch_size,
-            num_workers=0,
             shuffle=True
         )
         target_loader = torch.utils.data.DataLoader(
             target_dataset,
             batch_size=self.batch_size,
-            num_workers=0,
             shuffle=True
         )
         return train_loader, target_loader
@@ -710,8 +771,7 @@ class Training():
         if load:
             self.discriminator1.load_state_dict(torch.load("model/" + "disc1.pt"))
             self.discriminator2.load_state_dict(torch.load("model/" + "disc2.pt"))
-            self.generator1.load_state_dict(torch.load("model/" + "gen1.pt"))
-            self.generator2.load_state_dict(torch.load("model/" + "gen2.pt"))
+            self.generator.load_state_dict(torch.load("model/" + "gen.pt"))
             self.optim_disc.load_state_dict(torch.load("optimizer/" + "disc.pt"))
             self.optim_gen.load_state_dict(torch.load("optimizer/"+ "gen.pt"))
         ones = torch.ones(self.batch_size, requires_grad=False).to(device)
@@ -721,16 +781,16 @@ class Training():
 
             iter_emojis = iter(self.dataloader[0]) 
             iter_images = iter(self.dataloader[1])
-            num_batches = len(self.dataloader[0])
+            num_batches = min(len(self.dataloader[1]), len(self.dataloader[0]))
             for i in range(num_batches):
                 emojis = iter_emojis.next()[0].to(device)
                 images = iter_images.next()[0].to(device)
                 
-                if emojis.shape[0] < self.batch_size:
+                if emojis.shape[0] < self.batch_size  or images.shape[0] < self.batch_size:
                     continue
 
-                fake_emojis = self.generator1(images)
-                fake_images = self.generator2(emojis)
+                fake_emojis, fake_images = self.generator(images, emojis)
+
 
                 for _ in range(1):   
                 # Discrimenator , needs update for steps
@@ -742,10 +802,9 @@ class Training():
 
 
                 # HIGHLY INEFFICIENT. retain graph would be better
-                fake_emojis = self.generator1(images)
-                fake_images = self.generator2(emojis)
-                reconst_emojis = self.generator1(fake_images)
-                reconst_images = self.generator2(fake_emojis)
+
+                fake_emojis, fake_images = self.generator(images, emojis)
+                reconst_emojis, reconst_images = self.generator(fake_images, fake_emojis)
 
                 for _ in range(1):   
                     # Generator , needs update for steps
@@ -759,7 +818,7 @@ class Training():
 
 
                 # WRITE DATA
-                if i % 6 == 0:
+                if i % 15 == 14:
                     write_data_unordered = (np.moveaxis(emojis[0].detach().cpu().numpy(), 0, -1) * 255)
                     write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
                     np.expand_dims(write_data_unordered[:,:,0], axis=2), np.expand_dims(write_data_unordered[:,:,3], axis=2)), axis=2)     
@@ -778,18 +837,22 @@ class Training():
                     im = Image.fromarray(np.uint8(write_data), mode='RGB')
                     im.save('out_images/' + 'org_image.png')
 
-                    write_data_unordered = (np.moveaxis(fake_images[0].detach().cpu().numpy(), 0, -1) * 255)
+
+                    # Get help and use alpha channel from orignal
+                    out_fake_image = (np.moveaxis(fake_images[0].detach().cpu().numpy(), 0, -1) * 255)
+                    org_emoji = (np.moveaxis(emojis[0].detach().cpu().numpy(), 0, -1) * 255)
+                    write_data_unordered = np.concatenate((out_fake_image[:, :, :3] , np.expand_dims(org_emoji[:, :, 3], axis=2)), axis = 2)
+
                     write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
-                    np.expand_dims(write_data_unordered[:,:,0], axis=2)), axis=2)     
-                    im = Image.fromarray(np.uint8(write_data), mode='RGB')
+                    np.expand_dims(write_data_unordered[:,:,0], axis=2), np.expand_dims(write_data_unordered[:,:,3], axis=2)), axis=2)     
+                    im = Image.fromarray(np.uint8(write_data), mode='RGBA')
                     im.save('out_images/' + 'fake_image.png')
 
                 print("Epoch", epoch, "Iteration", i, "Generator loss",
                       loss_gen.item(), "Discriminator loss", loss_disc.item())
                 torch.save(self.discriminator1.state_dict(), "model/"+ "disc1.pt")
                 torch.save(self.discriminator2.state_dict(), "model/"+ "disc2.pt")
-                torch.save(self.generator1.state_dict(), "model/"+ "gen1.pt")
-                torch.save(self.generator2.state_dict(), "model/"+ "gen2.pt")
+                torch.save(self.generator.state_dict(), "model/"+ "gen.pt")
                 torch.save(self.optim_disc.state_dict(), "optimizer/"+ "disc.pt")
                 torch.save(self.optim_gen.state_dict(), "optimizer/"+ "gen.pt")
         
@@ -813,18 +876,20 @@ class EmojiDataset(Dataset):
                 im = np.array(cv2.imread(path + file, cv2.IMREAD_UNCHANGED))
                 try:
                     im_rgba = im / 255.0
+                    im_rgba = cv2.resize(im_rgba,(int(64 * up),int(64*up)))
                     im_rgba = np.moveaxis(im_rgba, -1, 0)
                     if im_rgba.shape[0] == 3:
                         continue
                     images.append(im_rgba)
-                except:
+                except Exception as e:
+                    print(e)
                     continue
 
         self.data = np.array(images)
-        self.data_up = np.empty((self.data.shape[0], self.data.shape[1], self.data.shape[2] * up, self.data.shape[3] * up))
+        self.data_up = np.empty((self.data.shape[0], self.data.shape[1], self.data.shape[2], self.data.shape[3]))
 
         for i in range(self.data.shape[0]):
-            self.data_up[i] = self.data[i].repeat(up, 1).repeat(up, 2)
+            self.data_up[i] = self.data[i]
         self.data = self.data_up
         print(self.data.shape)
 
@@ -840,10 +905,12 @@ class ImageDataset(Dataset):
         arr_file_names = []
 
         images = np.empty((1000, 3, int(1024/down), int(1024/down)))
+
         for path in paths:
             files = os.listdir(os.getcwd() +'/'+ path)
             for i, file in enumerate(files):
                 im = np.array(cv2.imread(path +'/' + file, cv2.IMREAD_UNCHANGED))
+
                 try:
                     im_rgb = im / 255.0
                     im_rgb = np.moveaxis(im_rgb, -1, 0)
@@ -854,6 +921,39 @@ class ImageDataset(Dataset):
 
         self.data = np.array(images)
         print(self.data.shape)
+    def __len__(self):
+        return self.data.shape[0]
+
+    def __getitem__(self, idx):
+        return torch.from_numpy(self.data[idx]).float(), torch.zeros(1)
+
+class ImageDatasetGogh(Dataset):
+    def __init__(self, down=4):
+        paths = ['gogh/vgdb_2016/train/vg']#, 'gogh/vgdb_2016/test/vg', 'gogh/vgdb_2016/test/nvg'] #, 'gogh/vgdb_2016/train/nvg']
+        arr_file_names = []
+
+        images = np.empty((99, 3, int(1024/down), int(1024/down)))
+
+        for path in paths:
+            files = os.listdir(os.getcwd() +'/'+ path)
+            for i, file in enumerate(files):
+                im = np.array(cv2.imread(path +'/' + file, cv2.IMREAD_UNCHANGED))
+                im = cv2.resize(im,(int(1024/down),int(1024/down)))
+
+                try:
+                    im_rgb = im / 255.0
+                    im_rgb = np.moveaxis(im_rgb, -1, 0)
+                    images[i] = im_rgb
+                except Exception as e:
+                    print(e)
+                    continue
+
+        self.data = np.array(images)
+        for i in range(self.data.shape[0]):
+            if np.unique(self.data[i]).shape[0] == 1:
+                print(i)
+        print(self.data.shape)
+
     def __len__(self):
         return self.data.shape[0]
 
@@ -961,7 +1061,8 @@ class Inference():
             return
 
         # Load image
-        im = np.array(cv2.imread(image_path, cv2.IMREAD_UNCHANGED))
+        im = np.array(cv2.imread(image_path, cv2.IMREAD_UNCHANGED))[:,:,:3]
+        print(im.shape)
         try:
             im_rgb = im / 255.0
             image = np.moveaxis(im_rgb, -1, 0)
@@ -976,7 +1077,7 @@ class Inference():
 
         # Rescale image
         image = nn.functional.interpolate(image, size=(256,256), mode='nearest')
-
+        print(image.shape, emoji.shape)
         fake_emoji = self.generator1(image)
         fake_image = self.generator2(emoji)
 
@@ -991,6 +1092,12 @@ class Inference():
         np.expand_dims(write_data_unordered[:,:,0], axis=2), np.expand_dims(write_data_unordered[:,:,3], axis=2)), axis=2)     
         im = Image.fromarray(np.uint8(write_data), mode='RGBA')
         im.save('out_images/' + 'fake_emoji.png')
+
+        write_data_unordered = (np.moveaxis(nn.functional.interpolate(fake_emoji.detach(), (64,64), mode='bilinear')[0].cpu().numpy(), 0, -1) * 255)
+        write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
+        np.expand_dims(write_data_unordered[:,:,0], axis=2), np.expand_dims(write_data_unordered[:,:,3], axis=2)), axis=2)     
+        im = Image.fromarray(np.uint8(write_data), mode='RGBA')
+        im.save('out_images/' + 'fake_emoji_small.png')
 
         write_data_unordered = (np.moveaxis(image[0].detach().cpu().numpy(), 0, -1) * 255)
         write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
@@ -1008,5 +1115,5 @@ class Inference():
 ##############################################################################
 
 if __name__ == "__main__":
-    #Training().start(load=True)
-    Inference("model/").apply("node_modules/emoji-datasource-apple/img/apple/64/1f924.png", "01000_hq/01000.png")
+    #Training().start(load=False) #"node_modules/emoji-datasource-apple/img/apple/64/1f924.png" "01000_hq/01000.png"
+    Inference("model/").apply("node_modules/emoji-datasource-apple/img/apple/64/1f60d.png", "jonas.png")
