@@ -629,7 +629,7 @@ class Discriminator(nn.Module):
 class GeneratorDown(nn.Module):
     def __init__(self, nc=4, add_channel=1, convs_up=0, convs_down=0):
         super(GeneratorDown, self).__init__()
-        activation = nn.ReLU
+        activation = nn.SELU
         nc = nc
         ngf = 128
         self.conv1 = nn.Sequential(
@@ -666,7 +666,7 @@ class GeneratorDown(nn.Module):
 class GeneratorUp(nn.Module):
     def __init__(self, nc=4, add_channel=1, convs_up=0, convs_down=0):
         super(GeneratorUp, self).__init__()
-        activation = nn.ReLU
+        activation = nn.SELU
         nc = nc
         ngf = 128
         self.up_conv1 = nn.Sequential(
@@ -1041,14 +1041,13 @@ class Res_Block_Up_2D(nn.Module):
 class Inference():
     def __init__(self, path=""):
         self.discriminator1 = Discriminator(nc=4, blocks_down=4).to(device)
-        self.generator1 = Generator(nc=3).to(device)
-
         self.discriminator2 = Discriminator(nc=3, blocks_down=4).to(device)
-        self.generator2 = Generator(nc=4, add_channel=-1).to(device)
+        self.generator = DoubleGenerator().to(device)
 
         # path must contain gen1.pt and gen2.pt
-        self.generator1.load_state_dict(torch.load(path + "gen1.pt"))
-        self.generator2.load_state_dict(torch.load(path + "gen2.pt"))
+        self.generator.load_state_dict(torch.load(path + "/gen.pt"))
+        self.generator.eval()
+
     
     def apply(self, emoji_path, image_path):
         # Load emoji
@@ -1056,20 +1055,21 @@ class Inference():
             im = np.array(cv2.imread(emoji_path, cv2.IMREAD_UNCHANGED))
             im_rgba = im / 255.0
             emoji = np.moveaxis(im_rgba, -1, 0).repeat(4, 1).repeat(4, 2)
-        except:
+        except Exception as e:
             print("Emoji not loaded.")
-            return
+            print(e)
 
         # Load image
-        im = np.array(cv2.imread(image_path, cv2.IMREAD_UNCHANGED))[:,:,:3]
-        print(im.shape)
         try:
+            down=4
+            im = np.array(cv2.imread(image_path, cv2.IMREAD_UNCHANGED))
+            im = cv2.resize(im,(int(1024/down),int(1024/down)))
             im_rgb = im / 255.0
-            image = np.moveaxis(im_rgb, -1, 0)
-        except:
+            im_rgb = np.moveaxis(im_rgb, -1, 0)
+            image = im_rgb
+        except Exception as e:
             print("Image not loaded.")
-            return
-
+            print(e)
 
         # To tensor
         emoji = torch.unsqueeze(torch.from_numpy(emoji).to(device),dim=0).float()
@@ -1078,8 +1078,8 @@ class Inference():
         # Rescale image
         image = nn.functional.interpolate(image, size=(256,256), mode='nearest')
         print(image.shape, emoji.shape)
-        fake_emoji = self.generator1(image)
-        fake_image = self.generator2(emoji)
+        fake_emoji, fake_image = self.generator(image, emoji)
+
 
         write_data_unordered = (np.moveaxis(emoji[0].detach().cpu().numpy(), 0, -1) * 255)
         write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
@@ -1091,6 +1091,7 @@ class Inference():
         write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
         np.expand_dims(write_data_unordered[:,:,0], axis=2), np.expand_dims(write_data_unordered[:,:,3], axis=2)), axis=2)     
         im = Image.fromarray(np.uint8(write_data), mode='RGBA')
+        im_emo_out = im
         im.save('out_images/' + 'fake_emoji.png')
 
         write_data_unordered = (np.moveaxis(nn.functional.interpolate(fake_emoji.detach(), (64,64), mode='bilinear')[0].cpu().numpy(), 0, -1) * 255)
@@ -1109,11 +1110,13 @@ class Inference():
         write_data = np.concatenate((np.expand_dims(write_data_unordered[:,:,2], axis=2), np.expand_dims(write_data_unordered[:,:,1], axis=2), 
         np.expand_dims(write_data_unordered[:,:,0], axis=2)), axis=2)     
         im = Image.fromarray(np.uint8(write_data), mode='RGB')
+        im_im_out = im
         im.save('out_images/' + 'fake_image.png')
 
+        return im_emo_out, im_im_out
 
 ##############################################################################
 
 if __name__ == "__main__":
     #Training().start(load=False) #"node_modules/emoji-datasource-apple/img/apple/64/1f924.png" "01000_hq/01000.png"
-    Inference("model/").apply("node_modules/emoji-datasource-apple/img/apple/64/1f60d.png", "jonas.png")
+    Inference("model").apply("1f602.png", "nicolas.png")
